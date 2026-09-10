@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Palak Sheth — Full‑Stack Software Developer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root{
+    --bg:#05070a;
+    --panel:rgba(9,12,17,0.6);
+    --ink:#ECE7DA;
+    --ink-dim:#9AA3AC;
+    --ink-faint:#5B646E;
+    --brass:#E0A657;
+    --teal:#5FC2BA;
+    --violet:#A88CF0;
+    --warm:#F3EFE6;
+    --line:rgba(255,255,255,0.09);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; background:var(--bg); color:var(--ink); font-family:'Space Grotesk', sans-serif; overflow-x:hidden; }
+  ::selection{ background:var(--brass); color:#171009; }
+  h1,h2,h3{ font-family:'Fraunces', serif; font-weight:500; line-height:1.08; margin:0; color:var(--ink); }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+  a{ color:inherit; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ scroll-behavior:auto !important; }
+  }
+
+  /* ---------------- 3D CANVAS ---------------- */
+  #scene-canvas{
+    position:fixed; inset:0;
+    width:100%; height:100%;
+    z-index:0;
+    display:block;
+  }
+  .vignette{
+    position:fixed; inset:0; z-index:1; pointer-events:none;
+    background:radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(5,7,10,0.75) 100%);
+  }
+  .grain{
+    position:fixed; inset:0; z-index:1; pointer-events:none; opacity:0.035; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  #cursor-glow{
+    position:fixed; z-index:1; pointer-events:none; width:520px; height:520px;
+    border-radius:50%; transform:translate(-50%,-50%);
+    background:radial-gradient(circle, rgba(95,194,186,0.10), rgba(224,166,87,0.04) 45%, transparent 70%);
+    mix-blend-mode:screen;
+    will-change:transform;
+  }
+
+  /* ---------------- SCROLL SPACER ---------------- */
+  .scroll-spacer{ height:900vh; position:relative; z-index:0; }
+
+  /* ---------------- NAV ---------------- */
+  nav{
+    position:fixed; top:0; left:0; right:0; z-index:20;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:26px 44px;
+    pointer-events:none;
+  }
+  nav .logo{ font-family:'Fraunces', serif; font-style:italic; font-size:20px; text-decoration:none; pointer-events:auto; }
+  .navlinks{ display:flex; gap:30px; pointer-events:auto; }
+  .navlinks button{
+    background:none; border:none; color:var(--ink-dim); font-family:'Space Grotesk', sans-serif;
+    font-size:14px; cursor:pointer; padding:0; transition:color .2s ease;
+  }
+  .navlinks button:hover{ color:var(--ink); }
+  @media (max-width:680px){ .navlinks{ display:none; } nav{ padding:20px 22px; } }
+
+  /* ---------------- PROGRESS DOTS ---------------- */
+  .progress-rail{
+    position:fixed; right:28px; top:50%; transform:translateY(-50%); z-index:20;
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .progress-rail button{
+    width:8px; height:8px; border-radius:50%; border:1px solid var(--ink-faint);
+    background:transparent; cursor:pointer; padding:0; transition:all .25s ease;
+  }
+  .progress-rail button.active{ background:var(--brass); border-color:var(--brass); box-shadow:0 0 10px var(--brass); transform:scale(1.3); }
+  @media (max-width:680px){ .progress-rail{ display:none; } }
+
+  /* ---------------- SCROLL HINT ---------------- */
+  .scroll-hint{
+    position:fixed; bottom:38px; left:50%; transform:translateX(-50%); z-index:20;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink-faint);
+    transition:opacity .5s ease;
+  }
+  .scroll-hint .chevron{ width:14px; height:14px; border-right:1px solid var(--ink-faint); border-bottom:1px solid var(--ink-faint); transform:rotate(45deg); animation:bob 1.8s ease-in-out infinite; }
+  @keyframes bob{ 0%,100%{ transform:rotate(45deg) translate(0,0); } 50%{ transform:rotate(45deg) translate(4px,4px); } }
+
+  /* ---------------- STATION PANELS ---------------- */
+  .station{
+    position:fixed; z-index:10; top:0; left:0; width:100%; height:100vh;
+    display:flex; align-items:center;
+    opacity:0; pointer-events:none;
+    padding:0 8vw;
+  }
+  .station.right{ justify-content:flex-end; }
+  .station.left{ justify-content:flex-start; }
+  .station.center{ justify-content:center; }
+
+  .panel{
+    max-width:500px;
+    background:var(--panel);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:38px 40px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.4), 0 0 60px -20px var(--glow, transparent);
+  }
+  .panel h1, .panel h2{ text-shadow:0 0 28px var(--glow, transparent); }
+  .station{ transition:filter .3s ease; }
+  .panel.wide{ max-width:640px; }
+  .panel .accent-bar{ width:34px; height:3px; border-radius:2px; margin-bottom:20px; }
+  .kicker{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--teal); margin-bottom:14px; letter-spacing:0.02em; }
+  .panel h1{ font-size:clamp(32px,4.6vw,58px); max-width:13ch; }
+  .panel h2{ font-size:clamp(24px,3.2vw,36px); margin-bottom:6px; }
+  .panel p{ color:var(--ink-dim); font-size:15.5px; margin:14px 0 0; max-width:48ch; }
+  .panel .num{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--ink-faint); margin-bottom:14px; display:block; }
+
+  .btn{
+    font-family:'Space Grotesk', sans-serif; font-size:14.5px; padding:12px 24px; border-radius:4px;
+    text-decoration:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+    border:1px solid transparent; transition:transform .18s ease, background .2s ease, border-color .2s ease;
+  }
+  .btn:hover{ transform:translateY(-2px); }
+  .btn-solid{ background:var(--brass); color:#171009; font-weight:500; }
+  .btn-solid:hover{ background:#EFBB78; }
+  .btn-ghost{ background:var(--warm); border-color:rgba(255,255,255,0.22); color:var(--warm); }
+  .btn-ghost:hover{ border-color:var(--teal); color:#171009; }
+  .hero-actions{ display:flex; gap:14px; margin-top:32px; flex-wrap:wrap; }
+
+  .stat-row{ display:flex; gap:36px; margin-top:24px; flex-wrap:wrap; }
+  .stat b{ display:block; font-family:'Fraunces', serif; font-size:28px; font-weight:500; color:var(--brass); }
+  .stat span{ font-size:12px; color:var(--ink-faint); }
+
+  .stack-cols{ display:flex; gap:30px; margin-top:20px; flex-wrap:wrap; }
+  .stack-col .tag{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--teal); display:block; margin-bottom:8px; }
+  .stack-col h4{ font-family:'Fraunces', serif; font-style:italic; font-weight:500; font-size:16px; margin:0 0 8px; color:var(--ink); }
+  .stack-col ul{ list-style:none; margin:0; padding:0; }
+  .stack-col li{ color:var(--ink-dim); font-size:13.5px; padding:3px 0; }
+
+  .tag-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
+  .tag-pill{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-dim); border:1px solid rgba(255,255,255,0.16); padding:4px 10px; border-radius:20px; }
+  .proj-link{ display:inline-flex; margin-top:20px; font-size:14px; color:var(--violet); text-decoration:none; border-bottom:1px solid transparent; background:none; border-top:none; border-left:none; border-right:none; padding:0; font-family:'Space Grotesk', sans-serif; cursor:pointer; }
+  .proj-link:hover{ border-color:var(--violet); }
+
+  /* ---------------- CASE STUDY MODAL ---------------- */
+  .case-modal-overlay{
+    position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center;
+    background:rgba(3,4,6,0.72); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+    padding:6vh 5vw;
+  }
+  .case-modal-overlay.open{ display:flex; }
+  .case-modal{
+    max-width:640px; max-height:88vh; overflow-y:auto; width:100%;
+    background:#0B0E13; border:1px solid var(--line); border-radius:10px;
+    padding:40px 44px; box-shadow:0 30px 80px rgba(0,0,0,0.55);
+    position:relative;
+  }
+  .case-modal .case-close{
+    position:absolute; top:18px; right:18px; width:32px; height:32px; border-radius:50%;
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:var(--ink);
+    font-size:16px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .case-modal .case-close:hover{ background:rgba(255,255,255,0.12); border-color:var(--teal); color:var(--teal); }
+  .case-modal .case-num{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--ink-faint); display:block; margin-bottom:12px; }
+  .case-modal h3{ font-family:'Fraunces', serif; font-weight:500; font-size:clamp(24px,3vw,32px); color:var(--ink); margin:0 0 18px; }
+  .case-modal h4{ font-family:'Space Grotesk', sans-serif; font-size:13px; text-transform:uppercase; letter-spacing:0.04em; color:var(--teal); margin:24px 0 8px; }
+  .case-modal p{ color:var(--ink-dim); font-size:15px; line-height:1.65; margin:0 0 4px; }
+  .case-modal ul{ margin:0; padding-left:18px; color:var(--ink-dim); font-size:14.5px; line-height:1.7; }
+  .case-modal .tag-row{ margin-top:22px; }
+  @media (max-width:600px){ .case-modal{ padding:30px 24px; } }
+
+  /* ---------------- EMAIL COPY TOAST ---------------- */
+  #email-toast{
+    position:fixed; bottom:34px; left:50%; transform:translateX(-50%) translateY(12px);
+    background:#0B0E13; border:1px solid var(--teal); color:var(--ink);
+    font-family:'Space Grotesk', sans-serif; font-size:13.5px; padding:10px 18px;
+    border-radius:6px; z-index:200; opacity:0; pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+    box-shadow:0 10px 30px rgba(0,0,0,0.4);
+  }
+  #email-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .tl-list{ margin-top:18px; display:flex; flex-direction:column; gap:16px; }
+  .tl-row{ display:flex; justify-content:space-between; gap:14px; border-top:1px solid var(--line); padding-top:12px; }
+  .tl-row:first-child{ border-top:none; padding-top:0; }
+  .tl-role{ font-size:14.5px; color:var(--ink); }
+  .tl-when{ font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink-faint); white-space:nowrap; }
+
+  .contact-links{ margin-top:22px; }
+  .contact-links a{ display:flex; justify-content:space-between; align-items:center; text-decoration:none; padding:13px 0; border-top:1px solid var(--line); color:var(--ink); font-size:15px; transition:padding-left .2s ease, color .2s ease; }
+  .contact-links a:last-child{ border-bottom:1px solid var(--line); }
+  .contact-links a:hover{ padding-left:6px; color:var(--warm); }
+  .contact-links a span{ color:var(--ink-faint); font-size:12px; }
+
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:12px; color:var(--ink-faint); margin-bottom:6px; font-family:'IBM Plex Mono', monospace; }
+  .field input, .field textarea{
+    width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.16); border-radius:4px;
+    padding:11px 12px; color:var(--ink); font-family:'Space Grotesk', sans-serif; font-size:14px; resize:vertical;
+  }
+  .field input:focus, .field textarea:focus{ outline:none; border-color:var(--warm); }
+  .field textarea{ min-height:80px; }
+
+  @media (max-width:780px){
+    .station{ padding:0 6vw; justify-content:center !important; }
+    .panel{ max-width:100%; padding:28px; }
+  }
+
+  :focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
+
+  /* ---------------- HERO PHOTO UPLOAD (large, right side) ---------------- */
+  .photo-upload-hero{
+    position:absolute; z-index:11; right:9vw; top:50%; transform:translateY(-50%);
+    width:260px; height:260px;
+    border:2px dashed rgba(255,255,255,0.28); border-radius:14px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:12px; cursor:pointer; background:rgba(255,255,255,0.03); overflow:hidden;
+    transition:border-color .2s ease, background .2s ease;
+  }
+  .photo-upload-hero:hover{ border-color:var(--teal); background:rgba(255,255,255,0.06); }
+  .photo-upload-hero img{ width:100%; height:100%; object-fit:cover; display:none; }
+  .photo-upload-hero .photo-upload-placeholder-hero{
+    display:flex; flex-direction:column; align-items:center; gap:10px; color:var(--ink-faint);
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; text-align:center; padding:0 16px;
+    transition:color .2s ease;
+  }
+  .photo-upload-hero .photo-upload-placeholder-hero svg{ width:38px; height:38px; stroke:var(--ink-faint); transition:stroke .2s ease; }
+  .photo-upload-hero:hover .photo-upload-placeholder-hero,
+  .photo-upload-hero:hover .photo-upload-placeholder-hero svg{ color:var(--teal); stroke:var(--teal); }
+  .photo-upload-hero .remove-photo-hero{
+    position:absolute; top:8px; right:8px; width:24px; height:24px; border-radius:50%;
+    background:rgba(5,7,10,0.7); border:1px solid rgba(255,255,255,0.25); color:var(--ink);
+    font-size:14px; line-height:1; display:none; align-items:center; justify-content:center;
+    cursor:pointer; z-index:2;
+  }
+  .photo-upload-hero .remove-photo-hero:hover{ background:rgba(5,7,10,0.9); border-color:var(--teal); }
+  @media (max-width:1080px){ .photo-upload-hero{ right:4vw; width:210px; height:210px; } }
+  @media (max-width:780px){ .photo-upload-hero{ display:none; } }
+</style>
+</head>
+<body>
+
+<canvas id="scene-canvas"></canvas>
+<div class="vignette"></div>
+<div class="grain"></div>
+<div id="cursor-glow"></div>
+
+<nav>
+  <a href="#" class="logo" data-jump="0">P.S.</a>
+  <div class="navlinks">
+    <button data-jump="1">About</button>
+    <button data-jump="2">Stack</button>
+    <button data-jump="3">Work</button>
+    <button data-jump="6">Experience</button>
+    <button data-jump="7">Contact</button>
+  </div>
+</nav>
+
+<div class="progress-rail" id="progress-rail"></div>
+
+<div class="scroll-hint" id="scroll-hint">
+  <span>scroll to explore</span>
+  <span class="chevron"></span>
+</div>
+
+<!-- STATION 0 — HERO -->
+<div class="station left" data-t="0">
+  <div class="panel wide" style="--glow:#E0A657;">
+    <div class="kicker">available for new work · remote, on-site, full time</div>
+    <h1>I build the layers most people <em style="font-style:italic; color:var(--brass);">never see</em>.</h1>
+    <p>Palak Sheth — full‑stack software developer. I build web apps end to end: React/Node front to back, REST APIs, databases, and deployment — writing clean, tested code that ships on time and holds up in production.</p>
+    <div class="hero-actions">
+      <button class="btn btn-solid" data-jump="3">See the work</button>
+      <button class="btn btn-ghost" data-jump="7">Start a project</button>
+    </div>
+  </div>
+  <label class="photo-upload-hero" id="photo-upload-box-hero" for="profile-photo-input-hero">
+    <input type="file" id="profile-photo-input-hero" accept="image/*" style="display:none;">
+    <button type="button" class="remove-photo-hero" id="remove-photo-btn-hero" title="Remove photo">✕</button>
+    <img id="photo-preview-hero" alt="Profile photo">
+    <div class="photo-upload-placeholder-hero" id="photo-placeholder-hero">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.3"/></svg>
+      <span>Add photo</span>
+    </div>
+  </label>
+</div>
+
+<!-- STATION 1 — ABOUT -->
+<div class="station right" data-t="1">
+  <div class="panel" style="--glow:#5FC2BA;">
+    <div class="accent-bar" style="background:var(--teal);"></div>
+    <div class="kicker">about</div>
+    <h2>From the click to the query plan.</h2>
+    <p>I design the interface someone taps, then trace it all the way down to the query that has to hold up when real traffic shows up — not just in a demo.</p>
+    <p>Right now I'm focused on data‑heavy systems: dashboards, pipelines, and APIs that stay fast and correct as the numbers get bigger.</p>
+    <div class="stat-row">
+      <div class="stat"><b>15+</b><span>skills across the stack</span></div>
+      <div class="stat"><b>100%</b><span>ownership, pixel to query plan</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- STATION 2 — STACK -->
+<div class="station left" data-t="2">
+  <div class="panel wide" style="--glow:#5FC2BA;">
+    <div class="accent-bar" style="background:var(--teal);"></div>
+    <div class="kicker">tools of the trade</div>
+    <h2>The stack, layer by layer.</h2>
+    <div class="stack-cols">
+      <div class="stack-col">
+        <span class="tag">// interface</span>
+        <h4>Frontend</h4>
+        <ul><li>React & Next.js</li><li>TypeScript</li><li>Tailwind CSS</li><li>HTML5</li></ul>
+      </div>
+      <div class="stack-col">
+        <span class="tag">// logic</span>
+        <h4>Backend</h4>
+        <ul><li>Node & Express</li><li>Python & Django</li><li>Java</li><li>PHP</li></ul>
+      </div>
+      <div class="stack-col">
+        <span class="tag">// foundation</span>
+        <h4>Infra</h4>
+        <ul><li>PostgreSQL</li><li>MongoDB</li><li>MySQL</li></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STATION 3 — PROJECT A -->
+<div class="station right" data-t="3">
+  <div class="panel" style="--glow:#A88CF0;">
+    <div class="accent-bar" style="background:var(--violet);"></div>
+    <span class="num">01 / selected work</span>
+    <h2>LuxeLoft</h2>
+    <p>An AI‑powered e‑commerce platform for clothing, with an assistant that recommends outfits based on the occasion — from work meetings to weddings — instead of just showing a generic catalog.</p>
+    <div class="tag-row"><span class="tag-pill">HTML5</span><span class="tag-pill">Tailwind CSS</span><span class="tag-pill">Node.js</span><span class="tag-pill">MySQL</span></div>
+    <button type="button" class="proj-link" data-case="luxeloft">View case study →</button>
+  </div>
+</div>
+
+<!-- STATION 4 — PROJECT B -->
+<div class="station left" data-t="4">
+  <div class="panel" style="--glow:#A88CF0;">
+    <div class="accent-bar" style="background:var(--violet);"></div>
+    <span class="num">02 / selected work</span>
+    <h2>FleetFlow</h2>
+    <p>A SaaS platform for live vehicle parking, showing real‑time spot availability on a map. Owners can list and manage their own parking spots, so the network grows with each person who adds one in.</p>
+    <div class="tag-row"><span class="tag-pill">React</span><span class="tag-pill">Next.js</span><span class="tag-pill">Node.js</span><span class="tag-pill">MySQL</span></div>
+    <button type="button" class="proj-link" data-case="fleetflow">View case study →</button>
+  </div>
+</div>
+
+<!-- STATION 5 — PROJECT C -->
+<div class="station right" data-t="5">
+  <div class="panel" style="--glow:#A88CF0;">
+    <div class="accent-bar" style="background:var(--violet);"></div>
+    <span class="num">03 / selected work</span>
+    <h2>Record Shop</h2>
+    <p>A storefront for Hindi music CDs — browsing by artist, album, and era, with a catalog and cart built as a fast, front‑end‑only experience.</p>
+    <div class="tag-row"><span class="tag-pill">React</span><span class="tag-pill">Next.js</span></div>
+    <button type="button" class="proj-link" data-case="recordshop">View case study →</button>
+  </div>
+</div>
+
+<!-- STATION 6 — EXPERIENCE -->
+<div class="station left" data-t="6">
+  <div class="panel" style="--glow:#E0A657;">
+    <div class="accent-bar" style="background:var(--brass);"></div>
+    <div class="kicker">career</div>
+    <h2>Where I've worked.</h2>
+    <div class="tl-list">
+      <div class="tl-row"><span class="tl-role">Yuga Yatra Retail (OPC) Private Limited</span><span class="tl-when">2026 · 2 months</span></div>
+      <div class="tl-row"><span class="tl-role">Decodelabs</span><span class="tl-when">2026 · 1 month</span></div>
+      <div class="tl-row"><span class="tl-role">Autowhat AI & Automations</span><span class="tl-when">2026–2027 · 6 months</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- STATION 7 — CONTACT -->
+<div class="station center" data-t="7">
+  <div class="panel wide" style="--glow:#F3EFE6;">
+    <div class="accent-bar" style="background:var(--warm);"></div>
+    <div class="kicker">get in touch</div>
+    <h2>Let's build something.</h2>
+    <p>Open to full‑time roles and contract work.</p>
+    <div class="contact-links">
+      <a href="mailto:palaksheth9114@gmail.com" id="contact-email-link">Email <span>palaksheth9114@gmail.com</span></a>
+      <a href="https://github.com/palaksheth9114-rgb" target="_blank" rel="noopener">GitHub <span>/palaksheth9114-rgb</span></a>
+      <a href="https://www.linkedin.com/in/palak-sheth-7098233a9?utm_source=share_via&amp;utm_content=profile&amp;utm_medium=member_android" target="_blank" rel="noopener">LinkedIn <span>/in/palak-sheth</span></a>
+    </div>
+  </div>
+</div>
+
+<div class="scroll-spacer"></div>
+
+<!-- CASE STUDY MODAL -->
+<div class="case-modal-overlay" id="case-modal-overlay">
+  <div class="case-modal">
+    <button type="button" class="case-close" id="case-modal-close" aria-label="Close">✕</button>
+    <div id="case-modal-body"></div>
+  </div>
+</div>
+
+<div id="email-toast">Copied palaksheth9114@gmail.com to clipboard</div>
+
+<script>
+/* ============================================================
+   SCROLL / STATION LOGIC
+   ============================================================ */
+const STATION_COUNT = 8;
+const stations = Array.from(document.querySelectorAll('.station'));
+const progressRail = document.getElementById('progress-rail');
+const scrollHint = document.getElementById('scroll-hint');
+
+stations.forEach((_, i) => {
+  const b = document.createElement('button');
+  b.dataset.jump = i;
+  progressRail.appendChild(b);
+});
+const dots = Array.from(progressRail.children);
+
+function jumpTo(i){
+  const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+  window.scrollTo({ top: (i / (STATION_COUNT - 1)) * maxScroll, behavior:'smooth' });
+}
+document.querySelectorAll('[data-jump]').forEach(el => {
+  el.addEventListener('click', () => jumpTo(parseInt(el.dataset.jump)));
+});
+
+function smoothstep(edge0, edge1, x){
+  const t = Math.min(Math.max((x - edge0) / (edge1 - edge0), 0), 1);
+  return t * t * (3 - 2 * t);
+}
+
+let currentT = 0;
+function updateStations(){
+  const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+  const t = maxScroll > 0 ? window.scrollY / maxScroll : 0;
+  currentT = t;
+  const seg = 1 / (STATION_COUNT - 1);
+  const window_ = seg * 0.62;
+
+  stations.forEach(st => {
+    const st_t = parseFloat(st.dataset.t) / (STATION_COUNT - 1);
+    const d = Math.abs(t - st_t);
+    const opacity = 1 - smoothstep(window_ * 0.45, window_, d);
+    st.style.opacity = opacity.toFixed(3);
+    st.style.pointerEvents = opacity > 0.5 ? 'auto' : 'none';
+    const dir = t > st_t ? -1 : 1;
+    st.style.transform = `translateY(${dir * (1 - opacity) * 26}px)`;
+    st.style.filter = `blur(${((1 - opacity) * 6).toFixed(1)}px)`;
+  });
+
+  dots.forEach((d, i) => {
+    d.classList.toggle('active', Math.round(t * (STATION_COUNT - 1)) === i);
+  });
+
+  scrollHint.style.opacity = t < 0.02 ? '1' : '0';
+}
+window.addEventListener('scroll', updateStations, { passive:true });
+window.addEventListener('resize', updateStations);
+updateStations();
+
+/* cursor glow */
+const glow = document.getElementById('cursor-glow');
+let gx = window.innerWidth/2, gy = window.innerHeight/2, tx = gx, ty = gy;
+window.addEventListener('mousemove', e => { tx = e.clientX; ty = e.clientY; });
+(function glowLoop(){
+  gx += (tx - gx) * 0.08; gy += (ty - gy) * 0.08;
+  glow.style.transform = `translate(${gx}px, ${gy}px) translate(-50%,-50%)`;
+  requestAnimationFrame(glowLoop);
+})();
+
+/* ============================================================
+   THREE.JS SCENE — camera flies along a curved path through
+   a sequence of glowing 3D installations, one per station.
+   ============================================================ */
+(function(){
+  const canvas = document.getElementById('scene-canvas');
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias:true, powerPreference:'high-performance' });
+  } catch(e){ console.warn('WebGL unavailable', e); return; }
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+
+  const BG = 0x05070a;
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(BG);
+  scene.fog = new THREE.FogExp2(BG, 0.016);
+
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
+
+  // ---- lights ----
+  scene.add(new THREE.AmbientLight(0x445566, 0.6));
+  const hemi = new THREE.HemisphereLight(0x8899aa, 0x05070a, 0.5);
+  scene.add(hemi);
+
+  // ---- glow sprite texture generator ----
+  function makeGlowTexture(){
+    const size = 256;
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    const g = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.35, 'rgba(255,255,255,0.35)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, size, size);
+    return new THREE.CanvasTexture(c);
+  }
+  const glowTex = makeGlowTexture();
+
+  function addGlow(position, color, scale){
+    // inner bright core
+    const matInner = new THREE.SpriteMaterial({ map:glowTex, color, transparent:true, blending:THREE.AdditiveBlending, depthWrite:false, opacity:1 });
+    const inner = new THREE.Sprite(matInner);
+    inner.position.copy(position);
+    inner.scale.set(scale*0.45, scale*0.45, 1);
+    scene.add(inner);
+    // soft outer bloom
+    const matOuter = new THREE.SpriteMaterial({ map:glowTex, color, transparent:true, blending:THREE.AdditiveBlending, depthWrite:false, opacity:0.45 });
+    const outer = new THREE.Sprite(matOuter);
+    outer.position.copy(position);
+    outer.scale.set(scale*1.6, scale*1.6, 1);
+    scene.add(outer);
+    return inner;
+  }
+
+  const breathingLights = []; // { light, base, phase }
+  function addPointLight(position, color, intensity, distance){
+    const l = new THREE.PointLight(color, intensity, distance, 2);
+    l.position.copy(position);
+    scene.add(l);
+    breathingLights.push({ light:l, base:intensity, phase:Math.random()*Math.PI*2 });
+    return l;
+  }
+
+  // ---- nebula skybox (large inverted sphere with drifting color noise) ----
+  {
+    const nebulaGeo = new THREE.SphereGeometry(95, 48, 32);
+    const nebulaMat = new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      depthWrite: false,
+      uniforms: {
+        uTime: { value: 0 },
+        uColorA: { value: new THREE.Color(0x0c1220) },
+        uColorB: { value: new THREE.Color(0x2a1a3a) },
+        uColorC: { value: new THREE.Color(0x0a2a2c) },
+      },
+      vertexShader: `
+        varying vec3 vPos;
+        void main(){
+          vPos = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vPos;
+        uniform float uTime;
+        uniform vec3 uColorA;
+        uniform vec3 uColorB;
+        uniform vec3 uColorC;
+        float hash(vec3 p){ return fract(sin(dot(p, vec3(12.9898,78.233,45.164))) * 43758.5453); }
+        float noise(vec3 p){
+          vec3 i = floor(p); vec3 f = fract(p);
+          f = f*f*(3.0-2.0*f);
+          float n000=hash(i);
+          float n100=hash(i+vec3(1,0,0));
+          float n010=hash(i+vec3(0,1,0));
+          float n110=hash(i+vec3(1,1,0));
+          float n001=hash(i+vec3(0,0,1));
+          float n101=hash(i+vec3(1,0,1));
+          float n011=hash(i+vec3(0,1,1));
+          float n111=hash(i+vec3(1,1,1));
+          return mix(
+            mix(mix(n000,n100,f.x), mix(n010,n110,f.x), f.y),
+            mix(mix(n001,n101,f.x), mix(n011,n111,f.x), f.y),
+            f.z
+          );
+        }
+        void main(){
+          vec3 p = normalize(vPos) * 2.2 + vec3(0.0, 0.0, uTime * 0.012);
+          float n1 = noise(p * 1.3);
+          float n2 = noise(p * 2.6 + 5.0);
+          float n = n1 * 0.65 + n2 * 0.35;
+          vec3 col = mix(uColorA, uColorB, smoothstep(0.3, 0.75, n));
+          col = mix(col, uColorC, smoothstep(0.55, 0.95, n2));
+          gl_FragColor = vec4(col, 1.0);
+        }
+      `
+    });
+    var nebulaMesh = new THREE.Mesh(nebulaGeo, nebulaMat);
+    scene.add(nebulaMesh);
+  }
+
+  // ---- station object positions ----
+  const P = [
+    new THREE.Vector3(0,    0,   0),    // 0 hero
+    new THREE.Vector3(-7,   1,  -18),   // 1 about
+    new THREE.Vector3(8,   -1,  -36),   // 2 stack
+    new THREE.Vector3(-8,   1,  -54),   // 3 project A
+    new THREE.Vector3(8,    0,  -72),   // 4 project B
+    new THREE.Vector3(-7,  -1,  -90),   // 5 project C
+    new THREE.Vector3(6,    1, -108),   // 6 experience
+    new THREE.Vector3(0,    0, -126),   // 7 contact
+  ];
+
+  const camPts = [
+    new THREE.Vector3(0,   0.4,  14),
+    new THREE.Vector3(-3,  1.4,  -8),
+    new THREE.Vector3(4,  -0.2, -27),
+    new THREE.Vector3(-4,  1.4, -45),
+    new THREE.Vector3(4,   0.4, -63),
+    new THREE.Vector3(-3, -0.6, -81),
+    new THREE.Vector3(3,   1.4, -99),
+    new THREE.Vector3(0,   0.4, -119),
+  ];
+  const camCurve = new THREE.CatmullRomCurve3(camPts, false, 'catmullrom', 0.4);
+  const targetCurve = new THREE.CatmullRomCurve3(P, false, 'catmullrom', 0.4);
+
+  const animatedMeshes = []; // { mesh, speed }
+  const satellites = []; // { obj, center, radius, angle, speed, axis }
+
+  function edgeLines(geo, color, opacity){
+    const edges = new THREE.EdgesGeometry(geo);
+    const mat = new THREE.LineBasicMaterial({ color, transparent:true, opacity: opacity ?? 0.6 });
+    return new THREE.LineSegments(edges, mat);
+  }
+
+  // ---------- STATION 0: HERO — faceted icosahedron core ----------
+  {
+    const geo = new THREE.IcosahedronGeometry(2.1, 1);
+    const mat = new THREE.MeshPhysicalMaterial({ color:0xE0A657, metalness:0.6, roughness:0.28, flatShading:true, emissive:0xE0A657, emissiveIntensity:0.15, clearcoat:0.6, clearcoatRoughness:0.25 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(P[0]);
+    scene.add(mesh);
+    scene.add(edgeLines(geo, 0xffe3b0, 0.5).translateX(P[0].x).translateY(P[0].y).translateZ(P[0].z));
+    addGlow(P[0], 0xE0A657, 9);
+    addPointLight(P[0].clone().add(new THREE.Vector3(3,3,3)), 0xE0A657, 2.2, 20);
+    animatedMeshes.push({ mesh, speed:0.18 });
+
+    // small orbiting satellites (representing versatility)
+    for (let i=0;i<5;i++){
+      const s = new THREE.Mesh(new THREE.OctahedronGeometry(0.14,0), new THREE.MeshStandardMaterial({ color:0x5FC2BA, emissive:0x5FC2BA, emissiveIntensity:0.4, metalness:0.4, roughness:0.4 }));
+      scene.add(s);
+      satellites.push({ obj:s, center:P[0], radius:3.4+Math.random()*0.6, angle:(i/5)*Math.PI*2, speed:0.35+Math.random()*0.15, axis:i%2===0?'xz':'yz', yOff:(Math.random()-0.5)*1.5 });
+    }
+  }
+
+  // ---------- STATION 1: ABOUT — layered translucent stack ----------
+  {
+    const layerDefs = [ {y:1.1,s:2.6},{y:0,s:3.1},{y:-1.1,s:2.3} ];
+    layerDefs.forEach(d => {
+      const geo = new THREE.BoxGeometry(d.s, 0.1, d.s*0.6);
+      const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color:0x5FC2BA, transparent:true, opacity:0.14, metalness:0.2, roughness:0.6 }));
+      mesh.position.copy(P[1]).add(new THREE.Vector3(0,d.y,0));
+      scene.add(mesh);
+      const edges = edgeLines(geo, 0x9fe6df, 0.7);
+      edges.position.copy(mesh.position);
+      scene.add(edges);
+      animatedMeshes.push({ mesh:edges, speed:0.06 });
+    });
+    addGlow(P[1], 0x5FC2BA, 8);
+    addPointLight(P[1].clone().add(new THREE.Vector3(-2,2,3)), 0x5FC2BA, 2, 18);
+  }
+
+  // ---------- STATION 2: STACK — orbiting ring cluster ----------
+  {
+    const colors = [0xE0A657, 0x5FC2BA, 0xA88CF0];
+    colors.forEach((c, i) => {
+      const geo = new THREE.TorusGeometry(1.6 + i*0.55, 0.025, 8, 64);
+      const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color:c, transparent:true, opacity:0.55 }));
+      mesh.position.copy(P[2]);
+      mesh.rotation.x = Math.PI/2.4 + i*0.5;
+      mesh.rotation.y = i*0.7;
+      scene.add(mesh);
+      animatedMeshes.push({ mesh, speed:0.1 + i*0.05 });
+      const node = new THREE.Mesh(new THREE.SphereGeometry(0.12,16,16), new THREE.MeshStandardMaterial({ color:c, emissive:c, emissiveIntensity:0.6 }));
+      scene.add(node);
+      satellites.push({ obj:node, center:P[2], radius:1.6+i*0.55, angle:i*2, speed:0.22+i*0.05, axis:i%2===0?'xy':'xz' });
+    });
+    addGlow(P[2], 0xffffff, 7);
+    addPointLight(P[2].clone().add(new THREE.Vector3(2,-2,3)), 0x8899ff, 1.8, 20);
+  }
+
+  // ---------- STATIONS 3–5: PROJECTS — distinct violet forms ----------
+  function projectShape(geo, pos){
+    const mesh = new THREE.Mesh(geo, new THREE.MeshPhysicalMaterial({ color:0xA88CF0, metalness:0.55, roughness:0.25, flatShading:true, transparent:true, opacity:0.92, clearcoat:0.5, clearcoatRoughness:0.3 }));
+    mesh.position.copy(pos);
+    scene.add(mesh);
+    const edges = edgeLines(geo, 0xd8c9ff, 0.5);
+    edges.position.copy(pos);
+    scene.add(edges);
+    addGlow(pos, 0xA88CF0, 7.5);
+    addPointLight(pos.clone().add(new THREE.Vector3(2,2,2)), 0xA88CF0, 2, 18);
+    animatedMeshes.push({ mesh, speed:0.22 }, { mesh:edges, speed:0.22 });
+  }
+  projectShape(new THREE.TorusKnotGeometry(1.3, 0.32, 120, 16, 2, 3), P[3]);
+  projectShape(new THREE.DodecahedronGeometry(1.7, 0), P[4]);
+  projectShape(new THREE.OctahedronGeometry(1.8, 0), P[5]);
+
+  // ---------- STATION 6: EXPERIENCE — ascending spiral of nodes ----------
+  {
+    const spiralGroup = new THREE.Group();
+    spiralGroup.position.copy(P[6]);
+    scene.add(spiralGroup);
+    const n = 24;
+    const pts = [];
+    for (let i=0;i<n;i++){
+      const a = i * 0.5;
+      const r = 1.6;
+      const x = Math.cos(a)*r, z = Math.sin(a)*r, y = (i/n)*3 - 1.5;
+      pts.push(new THREE.Vector3(x,y,z));
+    }
+    const curveGeo = new THREE.BufferGeometry().setFromPoints(pts);
+    const curveMat = new THREE.LineBasicMaterial({ color:0xE0A657, transparent:true, opacity:0.55 });
+    spiralGroup.add(new THREE.Line(curveGeo, curveMat));
+    [0, 8, 16, 23].forEach(i => {
+      const node = new THREE.Mesh(new THREE.SphereGeometry(0.13,16,16), new THREE.MeshStandardMaterial({ color:0xE0A657, emissive:0xE0A657, emissiveIntensity:0.5 }));
+      node.position.copy(pts[i]);
+      spiralGroup.add(node);
+    });
+    animatedMeshes.push({ mesh:spiralGroup, speed:0.08 });
+    addGlow(P[6], 0xE0A657, 7);
+    addPointLight(P[6].clone().add(new THREE.Vector3(0,2,2)), 0xE0A657, 1.8, 16);
+  }
+
+  // ---------- STATION 7: CONTACT — pulsing beacon ----------
+  let beacon;
+  {
+    const geo = new THREE.SphereGeometry(1.1, 32, 32);
+    beacon = new THREE.Mesh(geo, new THREE.MeshPhysicalMaterial({ color:0xF3EFE6, emissive:0xF3EFE6, emissiveIntensity:0.4, metalness:0.25, roughness:0.3, clearcoat:0.8, clearcoatRoughness:0.15 }));
+    beacon.position.copy(P[7]);
+    scene.add(beacon);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.9, 0.02, 8, 80), new THREE.MeshBasicMaterial({ color:0xF3EFE6, transparent:true, opacity:0.4 }));
+    ring.position.copy(P[7]);
+    ring.rotation.x = Math.PI/2.3;
+    scene.add(ring);
+    animatedMeshes.push({ mesh:ring, speed:0.15 });
+    addGlow(P[7], 0xF3EFE6, 10);
+    addPointLight(P[7].clone().add(new THREE.Vector3(0,1,3)), 0xF3EFE6, 2.4, 20);
+  }
+
+  // ---------- connective "data line" through all stations ----------
+  {
+    const railCurve = new THREE.CatmullRomCurve3(P, false, 'catmullrom', 0.4);
+    const tubeGeo = new THREE.TubeGeometry(railCurve, 200, 0.012, 6, false);
+    const tubeMat = new THREE.MeshBasicMaterial({ color:0x5FC2BA, transparent:true, opacity:0.35 });
+    scene.add(new THREE.Mesh(tubeGeo, tubeMat));
+  }
+
+  // ---------- twinkling starfield (custom shader) ----------
+  let starMat;
+  {
+    const count = 1400;
+    const positions = new Float32Array(count*3);
+    const phases = new Float32Array(count);
+    const sizes = new Float32Array(count);
+    for (let i=0;i<count;i++){
+      positions[i*3]   = (Math.random()-0.5) * 70;
+      positions[i*3+1] = (Math.random()-0.5) * 45;
+      positions[i*3+2] = (Math.random()) * -160 + 25;
+      phases[i] = Math.random() * Math.PI * 2;
+      sizes[i] = 0.6 + Math.random() * 1.8;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+    geo.setAttribute('phase', new THREE.BufferAttribute(phases,1));
+    geo.setAttribute('size', new THREE.BufferAttribute(sizes,1));
+    starMat = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+      uniforms:{ uTime:{ value:0 }, uColor:{ value:new THREE.Color(0xbfd6ff) } },
+      vertexShader:`
+        attribute float phase;
+        attribute float size;
+        uniform float uTime;
+        varying float vTwinkle;
+        void main(){
+          vTwinkle = 0.5 + 0.5 * sin(uTime * 1.6 + phase);
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = size * (140.0 / -mv.z);
+          gl_Position = projectionMatrix * mv;
+        }
+      `,
+      fragmentShader:`
+        uniform vec3 uColor;
+        varying float vTwinkle;
+        void main(){
+          vec2 c = gl_PointCoord - 0.5;
+          float d = length(c);
+          if (d > 0.5) discard;
+          float alpha = smoothstep(0.5, 0.0, d) * (0.35 + 0.65 * vTwinkle);
+          gl_FragColor = vec4(uColor, alpha);
+        }
+      `
+    });
+    scene.add(new THREE.Points(geo, starMat));
+  }
+
+  // ---------- close parallax dust ----------
+  let dustPoints;
+  {
+    const count = 160;
+    const positions = new Float32Array(count*3);
+    for (let i=0;i<count;i++){
+      positions[i*3]   = (Math.random()-0.5) * 20;
+      positions[i*3+1] = (Math.random()-0.5) * 14;
+      positions[i*3+2] = (Math.random()) * -30 + 10;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+    const mat = new THREE.PointsMaterial({ color:0x9fb3c8, size:0.045, transparent:true, opacity:0.5, sizeAttenuation:true, blending:THREE.AdditiveBlending, depthWrite:false });
+    dustPoints = new THREE.Points(geo, mat);
+    scene.add(dustPoints);
+  }
+
+  // ---------- mouse parallax ----------
+  let mouseX = 0, mouseY = 0, curMouseX = 0, curMouseY = 0;
+  window.addEventListener('mousemove', e => {
+    mouseX = (e.clientX / window.innerWidth - 0.5);
+    mouseY = (e.clientY / window.innerHeight - 0.5);
+  });
+
+  const tmpLook = new THREE.Vector3();
+  const clock = new THREE.Clock();
+
+  // colors used to tint fog/background as the camera nears each station
+  const stationColors = [0xE0A657, 0x5FC2BA, 0x8899ff, 0xA88CF0, 0xA88CF0, 0xA88CF0, 0xE0A657, 0xF3EFE6].map(c => new THREE.Color(c));
+  const baseFogColor = new THREE.Color(BG);
+  const tintColor = new THREE.Color();
+  const camUp = new THREE.Vector3(0, 1, 0);
+
+  function animate(){
+    requestAnimationFrame(animate);
+    const dt = Math.min(clock.getDelta(), 0.05);
+    const elapsed = clock.elapsedTime;
+
+    // camera along curve
+    const t = Math.min(Math.max(currentT, 0), 0.999);
+    const camPos = camCurve.getPointAt(t);
+    const lookT = Math.min(t + 0.03, 0.999);
+    const lookPos = targetCurve.getPointAt(lookT);
+
+    curMouseX += (mouseX - curMouseX) * 0.05;
+    curMouseY += (mouseY - curMouseY) * 0.05;
+
+    // subtle cinematic banking based on path curvature
+    const tA = Math.min(t + 0.005, 0.999);
+    const tanA = camCurve.getTangentAt(t);
+    const tanB = camCurve.getTangentAt(tA);
+    const turn = tanA.x * tanB.z - tanA.z * tanB.x;
+    const bank = Math.max(Math.min(turn * 26, 0.22), -0.22);
+    camUp.set(Math.sin(bank), Math.cos(bank), 0);
+    camera.up.copy(camUp);
+
+    camera.position.set(
+      camPos.x + curMouseX * 1.2,
+      camPos.y - curMouseY * 0.8,
+      camPos.z
+    );
+    tmpLook.copy(lookPos);
+    camera.lookAt(tmpLook);
+
+    // fog/background drifts toward the nearest station's accent color
+    const idxF = t * (stationColors.length - 1);
+    const idxLow = Math.floor(idxF);
+    const idxHigh = Math.min(idxLow + 1, stationColors.length - 1);
+    const mixT = idxF - idxLow;
+    tintColor.copy(stationColors[idxLow]).lerp(stationColors[idxHigh], mixT);
+    const fogColor = baseFogColor.clone().lerp(tintColor, 0.14);
+    scene.fog.color.copy(fogColor);
+    scene.background.copy(fogColor);
+
+    if (!reducedMotion){
+      animatedMeshes.forEach(a => { a.mesh.rotation.y += dt * a.speed; a.mesh.rotation.x += dt * a.speed * 0.4; });
+      satellites.forEach(s => {
+        s.angle += dt * s.speed;
+        let x=0,y=0,z=0;
+        if (s.axis === 'xz'){ x = Math.cos(s.angle)*s.radius; z = Math.sin(s.angle)*s.radius; y = s.yOff||0; }
+        else if (s.axis === 'xy'){ x = Math.cos(s.angle)*s.radius; y = Math.sin(s.angle)*s.radius*0.6; }
+        else { z = Math.cos(s.angle)*s.radius; y = Math.sin(s.angle)*s.radius*0.6; }
+        s.obj.position.set(s.center.x + x, s.center.y + y, s.center.z + z);
+      });
+      beacon.scale.setScalar(1 + Math.sin(elapsed*1.8)*0.06);
+      beacon.material.emissiveIntensity = 0.4 + Math.sin(elapsed*1.8)*0.15;
+
+      breathingLights.forEach(b => {
+        b.light.intensity = b.base * (0.85 + 0.15 * Math.sin(elapsed * 1.2 + b.phase));
+      });
+
+      if (starMat) starMat.uniforms.uTime.value = elapsed;
+      if (dustPoints){
+        dustPoints.position.x = -curMouseX * 2.2;
+        dustPoints.position.y = curMouseY * 1.6;
+        dustPoints.rotation.z += dt * 0.01;
+      }
+    }
+
+    scene.traverse(obj => { if (obj.material && obj.material.uniforms && obj.material.uniforms.uTime) obj.material.uniforms.uTime.value = elapsed; });
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+})();
+</script>
+
+<script>
+  // ---------------- PHOTO UPLOAD (hero + about) ----------------
+  function setupPhotoUpload(inputId, previewId, placeholderId, removeBtnId){
+    var input = document.getElementById(inputId);
+    var preview = document.getElementById(previewId);
+    var placeholder = document.getElementById(placeholderId);
+    var removeBtn = document.getElementById(removeBtnId);
+    if(!input) return;
+
+    input.addEventListener('change', function(e){
+      var file = e.target.files && e.target.files[0];
+      if(!file) return;
+      var reader = new FileReader();
+      reader.onload = function(evt){
+        preview.src = evt.target.result;
+        preview.style.display = 'block';
+        placeholder.style.display = 'none';
+        removeBtn.style.display = 'flex';
+      };
+      reader.readAsDataURL(file);
+    });
+
+    removeBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      input.value = '';
+      preview.src = '';
+      preview.style.display = 'none';
+      placeholder.style.display = 'flex';
+      removeBtn.style.display = 'none';
+    });
+  }
+
+  setupPhotoUpload('profile-photo-input-hero', 'photo-preview-hero', 'photo-placeholder-hero', 'remove-photo-btn-hero');
+</script>
+
+<script>
+  // ---------------- EMAIL: COPY-TO-CLIPBOARD FALLBACK ----------------
+  // The anchor's native mailto: click is left completely alone (no preventDefault),
+  // so it opens the visitor's default mail app exactly like a normal link.
+  // As a safety net for previews/sandboxes that block mailto: navigation,
+  // this also copies the address to the clipboard and shows a brief confirmation.
+  (function(){
+    var emailLink = document.getElementById('contact-email-link');
+    var toast = document.getElementById('email-toast');
+    if(!emailLink || !toast) return;
+
+    emailLink.addEventListener('click', function(){
+      var email = 'palaksheth9114@gmail.com';
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(email).then(function(){
+          toast.classList.add('show');
+          setTimeout(function(){ toast.classList.remove('show'); }, 2600);
+        }).catch(function(){ /* clipboard blocked — mailto click above still proceeds normally */ });
+      }
+    });
+  })();
+</script>
+
+<script>
+  // ---------------- CASE STUDY MODAL ----------------
+  var caseStudies = {
+    luxeloft: {
+      num: '01 / selected work',
+      title: 'LuxeLoft — AI‑recommended fashion, for every occasion',
+      body: [
+        { h: 'The problem', p: "Most clothing sites hand every visitor the same grid, no matter what they're actually shopping for — a wedding, a job interview, a weekend trip. LuxeLoft's catalog gets filtered by occasion instead, so the first thing a shopper sees is relevant to why they came." },
+        { h: 'What I built', p: 'A full storefront — product catalog, cart, and checkout flow — with a recommendation layer that suggests outfits based on the occasion the shopper selects, pulling from tagged inventory and simple rule‑based matching rather than a generic "you might also like" list.' },
+        { h: 'Stack & approach', ul: ['Semantic HTML5 for structure and accessibility', 'Tailwind CSS for a fast, consistent design system', 'Node.js API layer handling products, orders, and recommendation logic', 'MySQL for catalog, inventory, and order data'] },
+        { h: 'Outcome', p: 'A working end‑to‑end store where the AI layer sits on top of real commerce plumbing — not a demo bolted onto a mockup.' }
+      ]
+    },
+    fleetflow: {
+      num: '02 / selected work',
+      title: 'FleetFlow — live vehicle parking, crowd‑sourced by owners',
+      body: [
+        { h: 'The problem', p: "Static parking directories go stale fast. FleetFlow treats parking spots like inventory: owners list their own spot, so availability reflects what's actually happening right now instead of a directory someone updated months ago." },
+        { h: 'What I built', p: 'A SaaS web app showing live spot availability on a map, with a flow for owners to add, price, and manage their own listings, and a booking flow for drivers to reserve a spot ahead of time.' },
+        { h: 'Stack & approach', ul: ['React & Next.js for the map view, listings, and booking UI', 'Node.js API for listings, availability, and bookings', 'MySQL for spots, owners, and reservation records'] },
+        { h: 'Outcome', p: 'A self‑serve marketplace model instead of a hand‑curated one — the more owners join, the more useful the map gets.' }
+      ]
+    },
+    recordshop: {
+      num: '03 / selected work',
+      title: 'Record Shop — a storefront for Hindi music on CD',
+      body: [
+        { h: 'The problem', p: 'Hindi CDs and film soundtracks are a niche, scattered market online. This project gives that catalog a focused, fast browsing experience by artist, album, and era.' },
+        { h: 'What I built', p: 'A front‑end storefront — catalog browsing, filtering, and a cart — built as a fast, client‑rendered experience without a custom backend.' },
+        { h: 'Stack & approach', ul: ['React for componentized product cards, filters, and cart state', 'Next.js for routing and page structure'] },
+        { h: 'Outcome', p: 'A snappy, front‑end‑only shop that proves the browsing and cart experience can hold up without waiting on a backend build‑out.' }
+      ]
+    }
+  };
+
+  (function(){
+    var overlay = document.getElementById('case-modal-overlay');
+    var body = document.getElementById('case-modal-body');
+    var closeBtn = document.getElementById('case-modal-close');
+    if(!overlay) return;
+
+    function renderCase(key){
+      var data = caseStudies[key];
+      if(!data) return;
+      var html = '<span class="case-num">' + data.num + '</span>';
+      html += '<h3>' + data.title + '</h3>';
+      data.body.forEach(function(section){
+        html += '<h4>' + section.h + '</h4>';
+        if(section.p) html += '<p>' + section.p + '</p>';
+        if(section.ul){
+          html += '<ul>' + section.ul.map(function(item){ return '<li>' + item + '</li>'; }).join('') + '</ul>';
+        }
+      });
+      body.innerHTML = html;
+    }
+
+    function openModal(key){
+      renderCase(key);
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal(){
+      overlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    document.querySelectorAll('[data-case]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.preventDefault();
+        openModal(btn.dataset.case);
+      });
+    });
+
+    closeBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', function(e){
+      if(e.target === overlay) closeModal();
+    });
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Escape') closeModal();
+    });
+  })();
+</script>
+</body>
+</html>
