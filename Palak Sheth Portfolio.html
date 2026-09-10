@@ -220,32 +220,17 @@
 
   :focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
 
-  /* ---------------- HERO PHOTO UPLOAD (large, right side) ---------------- */
+  /* ---------------- HERO PHOTO FRAME (large, right side) ---------------- */
   .photo-upload-hero{
     position:absolute; z-index:11; right:9vw; top:50%; transform:translateY(-50%);
     width:260px; height:260px;
-    border:2px dashed rgba(255,255,255,0.28); border-radius:14px;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:12px; cursor:pointer; background:rgba(255,255,255,0.03); overflow:hidden;
-    transition:border-color .2s ease, background .2s ease;
+    border:1px solid var(--line); border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,0.4);
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,0.03); overflow:hidden;
+    transition:border-color .2s ease, transform .2s ease;
   }
-  .photo-upload-hero:hover{ border-color:var(--teal); background:rgba(255,255,255,0.06); }
-  .photo-upload-hero img{ width:100%; height:100%; object-fit:cover; display:none; }
-  .photo-upload-hero .photo-upload-placeholder-hero{
-    display:flex; flex-direction:column; align-items:center; gap:10px; color:var(--ink-faint);
-    font-family:'IBM Plex Mono', monospace; font-size:12.5px; text-align:center; padding:0 16px;
-    transition:color .2s ease;
-  }
-  .photo-upload-hero .photo-upload-placeholder-hero svg{ width:38px; height:38px; stroke:var(--ink-faint); transition:stroke .2s ease; }
-  .photo-upload-hero:hover .photo-upload-placeholder-hero,
-  .photo-upload-hero:hover .photo-upload-placeholder-hero svg{ color:var(--teal); stroke:var(--teal); }
-  .photo-upload-hero .remove-photo-hero{
-    position:absolute; top:8px; right:8px; width:24px; height:24px; border-radius:50%;
-    background:rgba(5,7,10,0.7); border:1px solid rgba(255,255,255,0.25); color:var(--ink);
-    font-size:14px; line-height:1; display:none; align-items:center; justify-content:center;
-    cursor:pointer; z-index:2;
-  }
-  .photo-upload-hero .remove-photo-hero:hover{ background:rgba(5,7,10,0.9); border-color:var(--teal); }
+  .photo-upload-hero:hover{ border-color:var(--teal); transform:translateY(-50%) scale(1.02); }
+  .photo-upload-hero img{ width:100%; height:100%; object-fit:cover; display:block; }
   @media (max-width:1080px){ .photo-upload-hero{ right:4vw; width:210px; height:210px; } }
   @media (max-width:780px){ .photo-upload-hero{ display:none; } }
 </style>
@@ -286,15 +271,9 @@
       <button class="btn btn-ghost" data-jump="7">Start a project</button>
     </div>
   </div>
-  <label class="photo-upload-hero" id="photo-upload-box-hero" for="profile-photo-input-hero">
-    <input type="file" id="profile-photo-input-hero" accept="image/*" style="display:none;">
-    <button type="button" class="remove-photo-hero" id="remove-photo-btn-hero" title="Remove photo">✕</button>
-    <img id="photo-preview-hero" alt="Profile photo">
-    <div class="photo-upload-placeholder-hero" id="photo-placeholder-hero">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.3"/></svg>
-      <span>Add photo</span>
-    </div>
-  </label>
+  <div class="photo-upload-hero" id="photo-upload-box-hero">
+    <img id="photo-preview-hero" src="palak.jpg" alt="Palak Sheth">
+  </div>
 </div>
 
 <!-- STATION 1 — ABOUT -->
