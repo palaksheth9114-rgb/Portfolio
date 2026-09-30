@@ -44,7 +44,7 @@ A client-side storefront for Hindi CD albums and film soundtracks with filtering
 
 ## 💼 Work Experience
 
-- **Autowhat AI & Automations** — *Developer Intern · On-site Internship*
+- **Autowhat AI & Automations** — *On-site Internship* (2026)
 - **Decodelabs** — *Developer Intern* (2026)
 - **Yuga Yatra Retail (OPC) Private Limited** — *Developer Intern* (2026)
 
